@@ -1,0 +1,17 @@
+macros:
+  "model": "neotoi-coder-v3.1-q4_k_m.gguf"
+  "ctx": "40960"
+
+cmd: |
+  ${tq}
+  ${defaults}
+  --model ${models}/${model}
+  -c ${ctx}
+  --temp 0.6
+  --top-k 20
+  --top-p 0.95
+  --jinja
+#  --cache-type-k turbo3
+#  --cache-type-v turbo3
+
+ttl: 360

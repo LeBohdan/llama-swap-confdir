@@ -1,0 +1,17 @@
+macros:
+  "model": "gemma-4-E4B-it-UD-Q8_K_XL.gguf"
+  "ctx": "131072"
+
+cmd: |
+  ${tq}
+  ${defaults}
+  --model ${models}/${model}
+  -c ${ctx}
+  --temp 1.0
+  --top-k 64
+  --top-p 0.95
+  --jinja
+  --cache-type-k turbo3
+  --cache-type-v turbo3
+
+ttl: 360

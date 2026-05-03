@@ -1,0 +1,29 @@
+# llama-swap YAML configuration
+# -----------------------------
+#
+
+healthCheckTimeout: 500
+logLevel: info
+metricsMaxInMemory: 1000
+startPort: 8100
+
+
+macros:
+
+  "llama": "/mnt/hdd/Apps/llama.cpp/build/bin/llama-server"
+  "prism": "/mnt/hdd/Apps/llama.cpp-prism/build/bin/llama-server"
+  "tq": "/mnt/hdd/Apps/llama.cpp-tq/build/bin/llama-server"
+
+  "models": "/mnt/ssd/Models"
+
+  "defaults": >
+      --host 0.0.0.0
+      --port ${PORT}
+      --ctx-size 4096
+      --main-gpu 0
+      -ngl -1
+      --flash-attn on
+      --parallel 1
+#      --fit on
+
+models:
