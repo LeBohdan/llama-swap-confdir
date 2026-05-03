@@ -1,0 +1,169 @@
+healthCheckTimeout: 500
+logLevel: info
+metricsMaxInMemory: 1000
+startPort: 8100
+macros:
+  "llama": "/mnt/hdd/Apps/llama.cpp/build/bin/llama-server"
+  "prism": "/mnt/hdd/Apps/llama.cpp-prism/build/bin/llama-server"
+  "tq": "/mnt/hdd/Apps/llama.cpp-tq/build/bin/llama-server"
+  "models": "/mnt/ssd/Models"
+  "defaults": >
+      --host 0.0.0.0
+      --port ${PORT}
+      --ctx-size 4096
+      --main-gpu 0
+      -ngl -1
+      --flash-attn on
+      --parallel 1
+models:
+
+  "Gemma-4-E4B":
+    macros:
+      "model": "gemma-4-E4B-it-UD-Q8_K_XL.gguf"
+      "ctx": "131072"
+    cmd: |
+      ${tq}
+      ${defaults}
+      --model ${models}/${model}
+      -c ${ctx}
+      --temp 1.0
+      --top-k 64
+      --top-p 0.95
+      --jinja
+      --cache-type-k turbo3
+      --cache-type-v turbo3
+    ttl: 360
+
+  "GRM-Coder-14b":
+    macros:
+      "model": "GRM-Coder-14b.i1-Q4_K_M.gguf"
+      "ctx": "65536"
+    cmd: |
+      ${tq}
+      ${defaults}
+      --model ${models}/${model}
+      -c ${ctx}
+      --temp 0.6
+      --top-k 20
+      --top-p 0.95
+      --jinja
+      --cache-type-k turbo3
+      --cache-type-v turbo3
+    ttl: 360
+
+  "MamayLM-Gemma-3-12B":
+    macros:
+      "model": "MamayLM-Gemma-3-12B-IT-v1.0.i1-Q6_K.gguf"
+      "ctx": "65536"
+    cmd: |
+      ${tq}
+      ${defaults}
+      --model ${models}/${model}
+      -c ${ctx}
+      --temp 0.7
+      --top-k 25
+      --top-p 0.95
+      --min-p 0.05
+      --repeat-penalty 1.1
+      --jinja
+      --cache-type-k turbo3
+      --cache-type-v turbo3
+    ttl: 360
+
+  "neotoi-coder-15B":
+    macros:
+      "model": "neotoi-coder-v3.1-q4_k_m.gguf"
+      "ctx": "40960"
+    cmd: |
+      ${tq}
+      ${defaults}
+      --model ${models}/${model}
+      -c ${ctx}
+      --temp 0.6
+      --top-k 20
+      --top-p 0.95
+      --jinja
+    ttl: 360
+
+  "Qwen3-14B":
+    macros:
+      "model": "Qwen3-14B-UD-Q4_K_XL.gguf"
+      "ctx": "40960"
+    cmd: |
+      ${tq}
+      ${defaults}
+      --model ${models}/${model}
+      -c ${ctx}
+      --temp 0.6
+      --top-k 20
+      --top-p 0.95
+      --min-p 0.0
+      --jinja
+      --cache-type-k turbo3
+      --cache-type-v turbo3
+      --reasoning on
+    ttl: 360
+
+  "Qwen3-Embedding-4B":
+    macros:
+      "model": "Qwen3-Embedding-4B-Q6_K.gguf"
+      "ctx": "16384"
+    cmd: |
+      ${llama}
+      ${defaults}
+      --model ${models}/${model}
+      --ctx-size ${ctx}
+      --embedding
+    ttl: 360
+
+  "Qwen3.5-9B":
+    macros:
+      "model": "Qwen3.5-9B-UD-Q6_K_XL.gguf"
+      "ctx": "262144"
+    cmd: |
+      ${tq}
+      ${defaults}
+      --model ${models}/${model}
+      -c ${ctx}
+      --temp 1.0
+      --top-k 20
+      --top-p 0.95
+      --min-p 0.0
+      --presence-penalty 1.5
+      --jinja
+      --cache-type-k turbo3
+      --cache-type-v turbo3
+      --reasoning on
+    ttl: 360
+
+  "Ternary-Bonsai-8B":
+    macros:
+      "model": "Ternary-Bonsai-8B-Q2_0.gguf"
+      "ctx": "65536"
+    cmd: |
+      ${prism}
+      ${defaults}
+      --model ${models}/${model}
+      -c ${ctx}
+      --threads 2
+      --batch-size 128
+      --temperature 0.7
+      --top-p 0.8
+      --top-k 20
+      --min-p 0.0
+      --max-new-tokens 2048
+      --prompt-template chatml
+      --jinja
+      --repeat-penalty 1.05
+      --cache-type-k q8_0
+      --cache-type-v q8_0
+    ttl: 360
+
+groups:
+  "single":
+    swap: true  # one model from group allowed
+    exclusive: true  #unload other groups
+    members:
+      - "Qwen2.5-coder-14B"
+      - "Qwen2.5-coder-7B"
+

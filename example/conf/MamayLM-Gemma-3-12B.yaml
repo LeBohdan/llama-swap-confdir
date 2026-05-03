@@ -1,0 +1,19 @@
+macros:
+  "model": "MamayLM-Gemma-3-12B-IT-v1.0.i1-Q6_K.gguf"
+  "ctx": "65536"
+
+cmd: |
+  ${tq}
+  ${defaults}
+  --model ${models}/${model}
+  -c ${ctx}
+  --temp 0.7
+  --top-k 25
+  --top-p 0.95
+  --min-p 0.05
+  --repeat-penalty 1.1
+  --jinja
+  --cache-type-k turbo3
+  --cache-type-v turbo3
+
+ttl: 360

@@ -1,0 +1,12 @@
+macros:
+  "model": "Qwen3-Embedding-4B-Q6_K.gguf"
+  "ctx": "16384"
+
+cmd: |
+  ${llama}
+  ${defaults}
+  --model ${models}/${model}
+  --ctx-size ${ctx}
+  --embedding
+
+ttl: 360

@@ -1,0 +1,8 @@
+groups:
+  "single":
+    swap: true  # one model from group allowed
+    exclusive: true  #unload other groups
+
+    members:
+      - "Qwen2.5-coder-14B"
+      - "Qwen2.5-coder-7B"

@@ -1,0 +1,17 @@
+macros:
+  "model": "GRM-Coder-14b.i1-Q4_K_M.gguf"
+  "ctx": "65536"
+
+cmd: |
+  ${tq}
+  ${defaults}
+  --model ${models}/${model}
+  -c ${ctx}
+  --temp 0.6
+  --top-k 20
+  --top-p 0.95
+  --jinja
+  --cache-type-k turbo3
+  --cache-type-v turbo3
+
+ttl: 360

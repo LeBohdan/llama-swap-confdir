@@ -1,0 +1,19 @@
+macros:
+  "model": "Qwen3-14B-UD-Q4_K_XL.gguf"
+  "ctx": "40960"
+
+cmd: |
+  ${tq}
+  ${defaults}
+  --model ${models}/${model}
+  -c ${ctx}
+  --temp 0.6
+  --top-k 20
+  --top-p 0.95
+  --min-p 0.0
+  --jinja
+  --cache-type-k turbo3
+  --cache-type-v turbo3
+  --reasoning on
+
+ttl: 360
