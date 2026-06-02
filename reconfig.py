@@ -26,8 +26,7 @@ Configuration Options (edit in script):
 Backup System:
 --------------
 - Existing config.yaml is backed up before overwriting
-- Backup format: config.yaml.YYYY-MM-DD_HH-MM.bak
-- Same-minute backups append seconds: config.yaml.YYYY-MM-DD_HH-MM-SS.bak
+- Single backup file: config.yaml.bak (overwritten each run)
 
 Usage:
 ------
@@ -37,7 +36,6 @@ Usage:
 
 import sys
 import re
-from datetime import datetime
 from pathlib import Path
 from typing import IO
 
@@ -193,13 +191,10 @@ def _preview_files(config_files: list[Path], source_dir: Path) -> None:
 
 def _create_backup(output_file: Path) -> None:
     """
-    Create a timestamped backup of the output file before overwriting.
+    Create a backup of the output file before overwriting.
 
-    Backup files are named using the format:
-    - config.yaml.YYYY-MM-DD_HH-MM.bak (normal case)
-    - config.yaml.YYYY-MM-DD_HH-MM-SS.bak (if a backup already exists for that minute)
-
-    This ensures we never lose existing configuration data when regenerating.
+    Always writes to a single backup file (config.yaml.bak),
+    overwriting any previous backup.
 
     Args:
         output_file: Path to the file to back up.
@@ -207,14 +202,9 @@ def _create_backup(output_file: Path) -> None:
     if not output_file.exists():
         return
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    backup_path = f"{output_file}.{timestamp}.bak"
-
-    if Path(backup_path).exists():
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        backup_path = f"{output_file}.{timestamp}.bak"
-
-    output_file.rename(backup_path)
+    backup_path = f"{output_file}.bak"
+    Path(backup_path).write_bytes(output_file.read_bytes())
+    output_file.unlink()
 
 
 def _merge_files(config_files: list[Path], source_dir: Path, output_file: Path) -> None:
