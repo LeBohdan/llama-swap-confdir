@@ -247,6 +247,84 @@ def _merge_files(config_files: list[Path], source_dir: Path, output_file: Path) 
 
 
 # ======================================================================
+# Macro Substitution Helpers
+# ======================================================================
+
+def _parse_local_macros(content: str) -> dict[str, str]:
+    """
+    Parse the 'macros:' block from YAML content into a dict.
+
+    Extracts top-level key-value pairs under the 'macros:' key,
+    stripping surrounding quotes. Returns an empty dict if no
+    macros block is found.
+
+    Args:
+        content: Raw text of a YAML config file.
+
+    Returns:
+        Dict mapping macro names to their values (quotes stripped).
+    """
+    macros: dict[str, str] = {}
+    in_macros = False
+
+    for line in content.splitlines():
+        stripped = line.strip()
+
+        if stripped.startswith('#'):
+            continue
+
+        if re.match(r'macros:\s*$', stripped):
+            in_macros = True
+            continue
+
+        if in_macros:
+            if not stripped:
+                continue
+
+            if not line[0].isspace():
+                in_macros = False
+                continue
+
+            match = re.match(r'["\']?(\w+)["\']?\s*:\s*(.+)', stripped)
+            if match:
+                key = match.group(1)
+                value = match.group(2).strip()
+                if (value.startswith('"') and value.endswith('"')) or \
+                   (value.startswith("'") and value.endswith("'")):
+                    value = value[1:-1]
+                macros[key] = value
+
+    return macros
+
+
+def _substitute_macros(line: str, macros: dict[str, str]) -> str:
+    """
+    Replace ${key} references with values from the macros dict.
+
+    Only replaces keys that exist in the provided dict. Unknown
+    ${...} references are left untouched. Numeric values are
+    returned without quotes (YAML int). Non-numeric values are
+    returned as plain strings.
+
+    Args:
+        line: A single line of YAML content.
+        macros: Dict of macro name → value.
+
+    Returns:
+        Line with known macros substituted.
+    """
+
+    def _replacer(match: re.Match) -> str:
+        key = match.group(1)
+        if key in macros:
+            value = macros[key]
+            return value if value.isdigit() else value
+        return match.group(0)
+
+    return re.sub(r'\$\{(\w+)\}', _replacer, line)
+
+
+# ======================================================================
 # File Writing Functions
 # ======================================================================
 
@@ -345,13 +423,27 @@ def _write_as_model_config(output_handle: IO[str], file_path: Path, source_dir: 
         return
 
     model_name = file_path.stem
+    local_macros = _parse_local_macros(content)
     processed_lines = []
+    in_cmd = False
 
     for line in content.splitlines(keepends=False):
+        stripped_line = line.lstrip()
+        indent = len(line) - len(stripped_line)
+
+        if stripped_line.startswith('cmd:'):
+            in_cmd = True
+        elif indent == 0 and stripped_line and not stripped_line.startswith('#'):
+            in_cmd = False
+
         if REMOVE_COMMENTS and line.startswith('#'):
             continue
         if REMOVE_EMPTY_LINES and not line.strip():
             continue
+
+        if not in_cmd and local_macros:
+            line = _substitute_macros(line, local_macros)
+
         processed_lines.append('    ' + line)
 
     formatted_content = '  "' + model_name + '":\n' + '\n'.join(processed_lines)
