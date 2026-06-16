@@ -6,6 +6,7 @@ A Python script that merges multiple YAML configuration files into a single `con
 
 - **Smart file ordering**: Organizes config files in a specific order (beginning → middle → end)
 - **Automatic model name detection**: Uses filename as model name for non-numeric files
+- **Macro substitution**: Replaces `${key}` references with values from the file's `macros:` block outside `cmd:` blocks, with arithmetic support (`${ctx/2}`, `${ctx*4}`, etc.)
 - **Comment filtering**: Optionally removes comment lines (starting with `#`) from all files
 - **Empty line filtering**: Optionally removes empty lines for a more compact output
 - **YAML structure protection**: Adds proper indentation for model configuration files
@@ -42,6 +43,47 @@ macros:
     macros:
       "model": "gemma-4-E4B-it.gguf"
 ```
+
+### Macro Substitution
+
+The script automatically resolves `${key}` references using values from the file's own `macros:` block. This is useful for fields outside `cmd:` where llama-swap's runtime macro expansion doesn't apply (e.g., `capabilities.context`).
+
+Substitution is applied **only outside `cmd:` blocks** — macros inside `cmd:` are left as-is and resolved by llama-swap at runtime.
+
+#### Basic Substitution
+
+```yaml
+# Input: GLM-4.7-Flash.yaml
+macros:
+  "ctx": "131072"
+
+capabilities:
+  context: ${ctx}
+
+# Output:
+  "GLM-4.7-Flash":
+    macros:
+      "ctx": "131072"
+    capabilities:
+      context: 131072
+```
+
+Numeric macro values are output as YAML integers (no quotes). Unknown `${...}` references are left untouched.
+
+#### Arithmetic Expressions
+
+Macros support inline arithmetic with `+`, `-`, `*`, `/` (integer division):
+
+| Expression | Result (with ctx=131072) |
+|------------|--------------------------|
+| `${ctx}` | `131072` |
+| `${ctx/2}` | `65536` |
+| `${ctx/4}` | `32768` |
+| `${ctx*2}` | `262144` |
+| `${ctx+1000}` | `132072` |
+| `${ctx-500}` | `130572` |
+
+Division by zero leaves the expression unchanged.
 
 ## Configuration
 
@@ -114,6 +156,7 @@ llama-swap-confdir/
 │   ├── config.yaml       # Generated output file
 │   └── conf/
 │       ├── 0-defaults.yaml      # Global defaults (inserted at beginning)
+│       ├── GLM-4.7-Flash.yaml  # Model config with capabilities (macro substitution demo)
 │       ├── Gemma-4-E4B.yaml    # Model config (middle, special handling)
 │       ├── Qwen3-14B.yaml      # Model config (middle, special handling)
 │       └── 00-groups.yaml      # Group definitions (inserted at end)
