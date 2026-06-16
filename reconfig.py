@@ -306,6 +306,9 @@ def _substitute_macros(line: str, macros: dict[str, str]) -> str:
     returned without quotes (YAML int). Non-numeric values are
     returned as plain strings.
 
+    Supports arithmetic expressions: ${ctx/2}, ${ctx*4}, ${ctx+100}, ${ctx-50}.
+    The result is always rounded to an integer.
+
     Args:
         line: A single line of YAML content.
         macros: Dict of macro name → value.
@@ -316,12 +319,29 @@ def _substitute_macros(line: str, macros: dict[str, str]) -> str:
 
     def _replacer(match: re.Match) -> str:
         key = match.group(1)
-        if key in macros:
-            value = macros[key]
-            return value if value.isdigit() else value
-        return match.group(0)
+        op_str = match.group(2)
+        if key not in macros:
+            return match.group(0)
+        value = macros[key]
+        if op_str:
+            try:
+                base = int(value)
+                op = op_str[0]
+                operand = int(op_str[1:])
+                if op == '+':
+                    return str(base + operand)
+                if op == '-':
+                    return str(base - operand)
+                if op == '*':
+                    return str(base * operand)
+                if op == '/':
+                    return str(base // operand)
+                return match.group(0)
+            except (ValueError, ZeroDivisionError):
+                return match.group(0)
+        return value if value.isdigit() else value
 
-    return re.sub(r'\$\{(\w+)\}', _replacer, line)
+    return re.sub(r'\$\{(\w+)([+\-*/]\d+)?\}', _replacer, line)
 
 
 # ======================================================================
