@@ -25,8 +25,7 @@ build/
 .DS_Store
 Thumbs.db
 
-# Generated config
-config.yaml
+
 
 # Backup
 *.bak
