@@ -3,10 +3,13 @@ logLevel: info
 metricsMaxInMemory: 1000
 startPort: 8100
 macros:
+
   "llama": "/mnt/hdd/Apps/llama.cpp/build/bin/llama-server"
   "prism": "/mnt/hdd/Apps/llama.cpp-prism/build/bin/llama-server"
   "tq": "/mnt/hdd/Apps/llama.cpp-tq/build/bin/llama-server"
+
   "models": "/mnt/ssd/Models"
+
   "defaults": >
       --host 0.0.0.0
       --port ${PORT}
@@ -15,12 +18,14 @@ macros:
       -ngl -1
       --flash-attn on
       --parallel 1
+
 models:
 
   "Gemma-4-E4B":
     macros:
       "model": "gemma-4-E4B-it-UD-Q8_K_XL.gguf"
       "ctx": "131072"
+    
     cmd: |
       ${tq}
       ${defaults}
@@ -38,6 +43,7 @@ models:
     macros:
       "model": "GLM-4.7-Flash-Q8_0.gguf"
       "ctx": "131072"
+    
     cmd: |
       ${llama}
       ${defaults}
@@ -58,6 +64,7 @@ models:
     macros:
       "model": "GRM-Coder-14b.i1-Q4_K_M.gguf"
       "ctx": "65536"
+    
     cmd: |
       ${tq}
       ${defaults}
@@ -75,6 +82,7 @@ models:
     macros:
       "model": "MamayLM-Gemma-3-12B-IT-v1.0.i1-Q6_K.gguf"
       "ctx": "65536"
+    
     cmd: |
       ${tq}
       ${defaults}
@@ -94,6 +102,7 @@ models:
     macros:
       "model": "neotoi-coder-v3.1-q4_k_m.gguf"
       "ctx": "40960"
+    
     cmd: |
       ${tq}
       ${defaults}
@@ -109,6 +118,7 @@ models:
     macros:
       "model": "Qwen3-14B-UD-Q4_K_XL.gguf"
       "ctx": "40960"
+    
     cmd: |
       ${tq}
       ${defaults}
@@ -128,6 +138,7 @@ models:
     macros:
       "model": "Qwen3-Embedding-4B-Q6_K.gguf"
       "ctx": "16384"
+    
     cmd: |
       ${llama}
       ${defaults}
@@ -140,6 +151,7 @@ models:
     macros:
       "model": "Qwen3.5-9B-UD-Q6_K_XL.gguf"
       "ctx": "262144"
+    
     cmd: |
       ${tq}
       ${defaults}
@@ -160,6 +172,7 @@ models:
     macros:
       "model": "Ternary-Bonsai-8B-Q2_0.gguf"
       "ctx": "65536"
+    
     cmd: |
       ${prism}
       ${defaults}

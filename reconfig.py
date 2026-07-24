@@ -41,10 +41,19 @@ from typing import IO
 
 
 # ======================================================================
+# Regex patterns (compile once, reuse for performance)
+# ======================================================================
+_NATURAL_SORT_RE = re.compile(r'(\d+)')
+_MACROS_HEADER_RE = re.compile(r'^macros:\s*$')
+_MACRO_PARSE_RE = re.compile(r'["\']?(\w+)["\']?\s*:\s*(.+)')
+_MACRO_SUB_RE = re.compile(r'\$\{(\w+)([+\-*/]\d+)?\}')
+
+
+# ======================================================================
 # Configuration (edit these values to customize behavior)
 # ======================================================================
-SOURCE_DIR = Path("./conf")               # Directory containing YAML files to merge
-OUTPUT_FILE = Path("./config.yaml")         # Output file path
+SOURCE_DIR = Path("./example/conf")               # Directory containing YAML files to merge
+OUTPUT_FILE = Path("./example/config.yaml")       # Output file path
 DRY_RUN = False                           # Set True to preview without writing
 REMOVE_COMMENTS = True                    # Set False to keep comment lines in output
 REMOVE_EMPTY_LINES = True                 # Set False to keep empty lines in output
@@ -86,8 +95,7 @@ def run(source_dir: Path = SOURCE_DIR, output_file: Path = OUTPUT_FILE) -> None:
         _preview_files(config_files, source_dir)
         return
 
-    _create_backup(output_file)
-    _merge_files(config_files, source_dir, output_file)
+    _create_backup_and_merge(config_files, source_dir, output_file)
 
 
 # ======================================================================
@@ -167,7 +175,7 @@ def _natural_sort_key(filename: str) -> list:
     """
     return [
         int(part) if part.isdigit() else part.lower()
-        for part in re.split(r'(\d+)', filename)
+        for part in _NATURAL_SORT_RE.split(filename)
     ]
 
 
@@ -185,43 +193,19 @@ def _preview_files(config_files: list[Path], source_dir: Path) -> None:
     for file_path in config_files:
         relative_path = file_path.relative_to(source_dir).as_posix()
         print(f"# === Start of file: {relative_path} ===")
-        print(f"# Content of {file_path}")
-        print(f"# === End of file: {relative_path} ===")
+        print(file_path.read_text(encoding="utf-8"))
+        print(f"# === End of file: {relative_path} ===\n")
 
 
-def _create_backup(output_file: Path) -> None:
+def _categorize_files(config_files: list[Path]) -> tuple[list[Path], list[Path], list[Path]]:
     """
-    Create a backup of the output file before overwriting.
-
-    Always writes to a single backup file (config.yaml.bak),
-    overwriting any previous backup.
+    Categorize files into beginning, middle, and end groups based on filename prefix.
 
     Args:
-        output_file: Path to the file to back up.
-    """
-    if not output_file.exists():
-        return
+        config_files: List of file paths to categorize.
 
-    backup_path = f"{output_file}.bak"
-    Path(backup_path).write_bytes(output_file.read_bytes())
-    output_file.unlink()
-
-
-def _merge_files(config_files: list[Path], source_dir: Path, output_file: Path) -> None:
-    """
-    Merge sorted configuration files into a single output file.
-
-    Files are categorized and written in order:
-    1. Files starting with "0-" (e.g., 0-defaults.yaml) → written first
-    2. Regular files → written in the middle (treated as model configs)
-    3. Files starting with "00-" (e.g., 00-groups.yaml) → written last
-
-    Each category is handled with appropriate formatting and separators.
-
-    Args:
-        config_files: Sorted list of files to merge.
-        source_dir: Source directory for computing relative paths.
-        output_file: Destination file for merged content.
+    Returns:
+        Tuple of (beginning_files, middle_files, end_files).
     """
     beginning_files = []
     end_files = []
@@ -235,20 +219,70 @@ def _merge_files(config_files: list[Path], source_dir: Path, output_file: Path) 
         else:
             middle_files.append(file_path)
 
-    with open(output_file, "w", encoding="utf-8") as output_handle:
-        for file_path in beginning_files:
-            _write_as_is(output_handle, file_path, source_dir)
+    return beginning_files, middle_files, end_files
 
-        for file_path in middle_files:
-            _write_as_model_config(output_handle, file_path, source_dir)
 
-        for file_path in end_files:
-            _write_as_is(output_handle, file_path, source_dir)
+def _create_backup_and_merge(config_files: list[Path], source_dir: Path, output_file: Path) -> None:
+    """
+    Atomically create backup and merge configuration files.
+
+    This function performs backup and write operations atomically:
+    1. Creates .bak backup (preserves original)
+    2. Writes content to .tmp file
+    3. Atomic rename to replace output file
+
+    If process fails during write, original remains untouched.
+    If process fails after backup, .bak exists as recovery.
+
+    Args:
+        config_files: Sorted list of files to merge.
+        source_dir: Source directory for computing relative paths.
+        output_file: Destination file for merged content.
+    """
+    if output_file.exists():
+        backup_path = Path(f"{output_file}.bak")
+        backup_path.write_bytes(output_file.read_bytes())
+
+    temp_file = output_file.with_suffix(".yaml.tmp")
+    try:
+        with open(temp_file, "w", encoding="utf-8") as output_handle:
+            beginning_files, middle_files, end_files = _categorize_files(config_files)
+
+            for file_path in beginning_files:
+                _write_as_is(output_handle, file_path, source_dir)
+
+            for file_path in middle_files:
+                _write_as_model_config(output_handle, file_path, source_dir)
+
+            for file_path in end_files:
+                _write_as_is(output_handle, file_path, source_dir)
+
+        temp_file.replace(output_file)
+    finally:
+        temp_file.unlink(missing_ok=True)
 
 
 # ======================================================================
 # Macro Substitution Helpers
 # ======================================================================
+
+def _safe_read_file(file_path: Path) -> str | None:
+    """
+    Read a file with error handling.
+
+    Args:
+        file_path: Path to the file to read.
+
+    Returns:
+        File content as string, or None if reading fails.
+    """
+    try:
+        content = file_path.read_text(encoding="utf-8")
+        return content if content.strip() else None
+    except (OSError, UnicodeDecodeError) as error:
+        print(f"Warning: Skipping '{file_path}' - {error}", file=sys.stderr)
+        return None
+
 
 def _parse_local_macros(content: str) -> dict[str, str]:
     """
@@ -273,7 +307,7 @@ def _parse_local_macros(content: str) -> dict[str, str]:
         if stripped.startswith('#'):
             continue
 
-        if re.match(r'macros:\s*$', stripped):
+        if _MACROS_HEADER_RE.match(stripped):
             in_macros = True
             continue
 
@@ -285,7 +319,7 @@ def _parse_local_macros(content: str) -> dict[str, str]:
                 in_macros = False
                 continue
 
-            match = re.match(r'["\']?(\w+)["\']?\s*:\s*(.+)', stripped)
+            match = _MACRO_PARSE_RE.match(stripped)
             if match:
                 key = match.group(1)
                 value = match.group(2).strip()
@@ -341,12 +375,31 @@ def _substitute_macros(line: str, macros: dict[str, str]) -> str:
                 return match.group(0)
         return value if value.isdigit() else value
 
-    return re.sub(r'\$\{(\w+)([+\-*/]\d+)?\}', _replacer, line)
+    return _MACRO_SUB_RE.sub(_replacer, line)
 
 
 # ======================================================================
 # File Writing Functions
 # ======================================================================
+
+def _should_skip_line(line: str, in_macros: bool = False) -> bool:
+    """
+    Check if a line should be skipped during filtering.
+
+    Args:
+        line: Line of text to check.
+        in_macros: Whether we're currently inside a macros block.
+
+    Returns:
+        True if the line should be skipped, False otherwise.
+    """
+    if REMOVE_COMMENTS and line.startswith('#'):
+        return True
+    if REMOVE_EMPTY_LINES and not line.strip():
+        if not in_macros:
+            return True
+    return False
+
 
 def _write_header_separator(output_handle: IO[str], relative_path: str) -> None:
     """
@@ -404,11 +457,35 @@ def _write_as_is(output_handle: IO[str], file_path: Path, source_dir: Path) -> N
         output_handle.write("\n")
         return
 
-    filtered_lines = [
-        line
-        for line in content.splitlines(keepends=False)
-        if not (REMOVE_COMMENTS and line.startswith('#')) and (not REMOVE_EMPTY_LINES or line.strip())
-    ]
+    filtered_lines = []
+    in_macros = False
+    last_was_empty = False
+    top_level_key_seen = False
+
+    for line in content.splitlines(keepends=False):
+        stripped = line.strip()
+
+        if stripped.startswith('macros:'):
+            in_macros = True
+        elif stripped and not stripped.startswith('#') and not line[0].isspace() and stripped.endswith(':'):
+            in_macros = False
+            top_level_key_seen = True
+
+        if _should_skip_line(line, in_macros=in_macros):
+            continue
+
+        if not stripped:
+            if in_macros or not top_level_key_seen:
+                filtered_lines.append(line)
+                last_was_empty = True
+            elif not last_was_empty:
+                filtered_lines.append(line)
+                last_was_empty = True
+            continue
+
+        last_was_empty = False
+        filtered_lines.append(line)
+
     filtered_content = '\n'.join(filtered_lines)
     output_handle.write(filtered_content + "\n")
     _write_footer_separator(output_handle, relative_path)
@@ -446,6 +523,7 @@ def _write_as_model_config(output_handle: IO[str], file_path: Path, source_dir: 
     local_macros = _parse_local_macros(content)
     processed_lines = []
     in_cmd = False
+    in_macro_block = False
 
     for line in content.splitlines(keepends=False):
         stripped_line = line.lstrip()
@@ -456,9 +534,12 @@ def _write_as_model_config(output_handle: IO[str], file_path: Path, source_dir: 
         elif indent == 0 and stripped_line and not stripped_line.startswith('#'):
             in_cmd = False
 
-        if REMOVE_COMMENTS and line.startswith('#'):
-            continue
-        if REMOVE_EMPTY_LINES and not line.strip():
+        if stripped_line.startswith('macros:'):
+            in_macro_block = True
+        elif in_macro_block and stripped_line and not line[0].isspace():
+            in_macro_block = False
+
+        if _should_skip_line(line, in_macros=in_macro_block):
             continue
 
         if not in_cmd and local_macros:
