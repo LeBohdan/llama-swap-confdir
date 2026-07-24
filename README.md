@@ -44,6 +44,10 @@ macros:
       "model": "gemma-4-E4B-it.gguf"
 ```
 
+### File Discovery
+
+The script searches for config files **recursively** through all subdirectories. Hidden files and directories (names starting with `.`) are automatically skipped.
+
 ### Macro Substitution
 
 The script automatically resolves `${key}` references using values from the file's own `macros:` block. This is useful for fields outside `cmd:` where llama-swap's runtime macro expansion doesn't apply (e.g., `capabilities.context`).
@@ -143,6 +147,7 @@ Before overwriting `config.yaml`, the script creates a backup file:
 
 - **Backup file**: `config.yaml.bak`
 - The backup is overwritten on each run (only one backup is preserved)
+- **Atomic write**: output is first written to a `.tmp` file, then atomically renamed over the target — if the process is interrupted during write, the original `config.yaml` remains untouched
 
 ## Example Directory
 
@@ -154,9 +159,10 @@ llama-swap-confdir/
 │   ├── config.yaml       # Generated output file
 │   └── conf/
 │       ├── 0-defaults.yaml      # Global defaults (inserted at beginning)
-│       ├── GLM-4.7-Flash.yaml  # Model config with capabilities (macro substitution demo)
-│       ├── Gemma-4-E4B.yaml    # Model config (middle, special handling)
-│       ├── Qwen3-14B.yaml      # Model config (middle, special handling)
+│       ├── GLM-4.7-Flash.yaml  # Model config
+│       ├── Gemma-4-E4B.yaml    # Model config
+│       ├── ...                  # and other model configs
+│       ├── Qwen3-14B.yaml      # Model config
 │       └── 00-groups.yaml      # Group definitions (inserted at end)
 └── reconfig.py
 ```
