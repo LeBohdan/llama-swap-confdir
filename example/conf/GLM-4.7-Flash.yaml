@@ -1,0 +1,22 @@
+macros:
+  "model": "GLM-4.7-Flash-Q8_0.gguf"
+  "ctx": "131072"
+
+cmd: |
+  ${llama}
+  ${defaults}
+  --model ${models}/${model}
+  --ctx-size ${ctx}
+  --jinja
+  --temp 1.0
+  --top-p 0.95
+  --min-p 0.01
+  --top-k 20
+  --repeat-penalty 1
+#    --tensor-split 0.6,0.4
+
+capabilities:
+  context: ${ctx}
+  tools: true
+
+ttl: 360

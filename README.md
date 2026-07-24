@@ -139,12 +139,10 @@ To preview what would be generated without writing, edit `DRY_RUN = True` in `re
 
 ## Backup System
 
-Before overwriting `config.yaml`, the script creates a timestamped backup:
+Before overwriting `config.yaml`, the script creates a backup file:
 
-- **Normal backup**: `config.yaml.2026-04-29_14-30.bak`
-- **Same-minute collision**: `config.yaml.2026-04-29_14-30-45.bak` (adds seconds)
-
-Backups are never overwritten; each run creates a new backup.
+- **Backup file**: `config.yaml.bak`
+- The backup is overwritten on each run (only one backup is preserved)
 
 ## Example Directory
 

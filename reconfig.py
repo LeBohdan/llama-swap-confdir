@@ -44,7 +44,7 @@ from typing import IO
 # Configuration (edit these values to customize behavior)
 # ======================================================================
 SOURCE_DIR = Path("./conf")               # Directory containing YAML files to merge
-OUTPUT_FILE = Path("config.yaml")         # Output file path
+OUTPUT_FILE = Path("./config.yaml")         # Output file path
 DRY_RUN = False                           # Set True to preview without writing
 REMOVE_COMMENTS = True                    # Set False to keep comment lines in output
 REMOVE_EMPTY_LINES = True                 # Set False to keep empty lines in output

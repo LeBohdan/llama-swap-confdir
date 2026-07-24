@@ -34,26 +34,6 @@ models:
       --cache-type-v turbo3
     ttl: 360
 
-  "GLM-4.7-Flash":
-    macros:
-      "model": "GLM-4.7-Flash-Q8_0.gguf"
-      "ctx": "131072"
-    cmd: |
-      ${llama}
-      ${defaults}
-      --model ${models}/${model}
-      --ctx-size ${ctx}
-      --jinja
-      --temp 1.0
-      --top-p 0.95
-      --min-p 0.01
-      --top-k 20
-      --repeat-penalty 1
-    capabilities:
-      context: 131072
-      tools: true
-    ttl: 360
-
   "GRM-Coder-14b":
     macros:
       "model": "GRM-Coder-14b.i1-Q4_K_M.gguf"
