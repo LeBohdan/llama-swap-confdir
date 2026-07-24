@@ -27,7 +27,6 @@ Thumbs.db
 
 # Generated config
 config.yaml
-example/config.yaml
 
 # Backup
 *.bak
