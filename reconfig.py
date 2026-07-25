@@ -22,7 +22,8 @@ Configuration Options (edit in script):
 - REMOVE_EMPTY_LINES: Remove empty lines from output (default: True)
 - ADD_SEPARATORS: Add "# filename" comments between files (default: False)
 
-`DRY_RUN` is controlled via `--dry-run` flag or environment variable `DRY_RUN=1`.
+`DRY_RUN` is controlled via `--dry-run` flag, environment variable `DRY_RUN=1`,
+or the `dry_run` parameter of `run()`.
 
 Backup System:
 --------------
@@ -35,12 +36,14 @@ Backup System:
     python3 reconfig.py --dry-run   # Preview without writing
 """
 
+from __future__ import annotations
+
 import sys
 import re
 import os
 import argparse
 from pathlib import Path
-from typing import IO
+from typing import IO, Optional
 
 
 # ======================================================================
@@ -50,6 +53,7 @@ _NATURAL_SORT_RE = re.compile(r'(\d+)')
 _MACROS_HEADER_RE = re.compile(r'^macros:\s*$')
 _MACRO_PARSE_RE = re.compile(r'["\']?(\w+)["\']?\s*:\s*(.+)')
 _MACRO_SUB_RE = re.compile(r'\$\{(\w+)([+\-*/]\d+)?\}')
+_INLINE_COMMENT_RE = re.compile(r'\s+#.*$')
 
 
 # ======================================================================
@@ -57,7 +61,6 @@ _MACRO_SUB_RE = re.compile(r'\$\{(\w+)([+\-*/]\d+)?\}')
 # ======================================================================
 SOURCE_DIR = Path("./example/conf")               # Directory containing YAML files to merge
 OUTPUT_FILE = Path("./example/config.yaml")       # Output file path
-DRY_RUN = os.environ.get("DRY_RUN", "0") == "1"  # Preview without writing (env: DRY_RUN=1)
 REMOVE_COMMENTS = True                    # Set False to keep comment lines in output
 REMOVE_EMPTY_LINES = True                 # Set False to keep empty lines in output
 ADD_SEPARATORS = False                    # Set True to add "# filename" comments
@@ -197,7 +200,9 @@ def _preview_files(config_files: list[Path], source_dir: Path) -> None:
     for file_path in config_files:
         relative_path = file_path.relative_to(source_dir).as_posix()
         print(f"# === Start of file: {relative_path} ===")
-        print(file_path.read_text(encoding="utf-8"))
+        content = _safe_read_file(file_path)
+        if content is not None:
+            print(content)
         print(f"# === End of file: {relative_path} ===\n")
 
 
@@ -270,7 +275,7 @@ def _create_backup_and_merge(config_files: list[Path], source_dir: Path, output_
 # Macro Substitution Helpers
 # ======================================================================
 
-def _safe_read_file(file_path: Path) -> str | None:
+def _safe_read_file(file_path: Path) -> Optional[str]:
     """
     Read a file with error handling.
 
@@ -319,7 +324,7 @@ def _parse_local_macros(content: str) -> dict[str, str]:
             if not stripped:
                 continue
 
-            if not line[0].isspace():
+            if not line[:1].isspace():
                 in_macros = False
                 continue
 
@@ -327,6 +332,13 @@ def _parse_local_macros(content: str) -> dict[str, str]:
             if match:
                 key = match.group(1)
                 value = match.group(2).strip()
+                if value and value[0] in ('"', "'"):
+                    quote_char = value[0]
+                    close = value.find(quote_char, 1)
+                    if close != -1:
+                        value = value[:close + 1]
+                else:
+                    value = _INLINE_COMMENT_RE.sub('', value).strip()
                 if (value.startswith('"') and value.endswith('"')) or \
                    (value.startswith("'") and value.endswith("'")):
                     value = value[1:-1]
@@ -377,7 +389,7 @@ def _substitute_macros(line: str, macros: dict[str, str]) -> str:
                 return match.group(0)
             except (ValueError, ZeroDivisionError):
                 return match.group(0)
-        return value if value.isdigit() else value
+        return value
 
     return _MACRO_SUB_RE.sub(_replacer, line)
 
@@ -454,10 +466,8 @@ def _write_as_is(output_handle: IO[str], file_path: Path, source_dir: Path) -> N
     relative_path = file_path.relative_to(source_dir).as_posix()
     _write_header_separator(output_handle, relative_path)
 
-    try:
-        content = file_path.read_text(encoding="utf-8")
-    except Exception as error:
-        print(f"Warning: Skipping '{file_path}' - {error}", file=sys.stderr)
+    content = _safe_read_file(file_path)
+    if content is None:
         output_handle.write("\n")
         return
 
@@ -471,7 +481,7 @@ def _write_as_is(output_handle: IO[str], file_path: Path, source_dir: Path) -> N
 
         if stripped.startswith('macros:'):
             in_macros = True
-        elif stripped and not stripped.startswith('#') and not line[0].isspace() and stripped.endswith(':'):
+        elif stripped and not stripped.startswith('#') and not line[:1].isspace() and stripped.endswith(':'):
             in_macros = False
             top_level_key_seen = True
 
@@ -516,10 +526,8 @@ def _write_as_model_config(output_handle: IO[str], file_path: Path, source_dir: 
     relative_path = file_path.relative_to(source_dir).as_posix()
     _write_header_separator(output_handle, relative_path)
 
-    try:
-        content = file_path.read_text(encoding="utf-8")
-    except Exception as error:
-        print(f"Warning: Skipping '{file_path}' - {error}", file=sys.stderr)
+    content = _safe_read_file(file_path)
+    if content is None:
         output_handle.write("\n")
         return
 
@@ -533,14 +541,14 @@ def _write_as_model_config(output_handle: IO[str], file_path: Path, source_dir: 
         stripped_line = line.lstrip()
         indent = len(line) - len(stripped_line)
 
-        if stripped_line.startswith('cmd:'):
+        if indent == 0 and stripped_line.startswith('cmd:'):
             in_cmd = True
         elif indent == 0 and stripped_line and not stripped_line.startswith('#'):
             in_cmd = False
 
         if stripped_line.startswith('macros:'):
             in_macro_block = True
-        elif in_macro_block and stripped_line and not line[0].isspace():
+        elif in_macro_block and stripped_line and not line[:1].isspace():
             in_macro_block = False
 
         if _should_skip_line(line, in_macros=in_macro_block):
@@ -558,7 +566,9 @@ def _write_as_model_config(output_handle: IO[str], file_path: Path, source_dir: 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Merge YAML configuration files for llama-swap.")
-    parser.add_argument("--dry-run", action="store_true", help="Preview output without writing")
+    parser.add_argument("--dry-run", action="store_true",
+                        default=os.environ.get("DRY_RUN", "0") == "1",
+                        help="Preview output without writing (env: DRY_RUN=1)")
     parser.add_argument("--source", type=Path, default=SOURCE_DIR, help="Source directory containing YAML files")
     parser.add_argument("--output", type=Path, default=OUTPUT_FILE, help="Output file path")
     args = parser.parse_args()
