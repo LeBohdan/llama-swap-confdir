@@ -47,16 +47,6 @@ from typing import IO, Optional
 
 
 # ======================================================================
-# Regex patterns (compile once, reuse for performance)
-# ======================================================================
-_NATURAL_SORT_RE = re.compile(r'(\d+)')
-_MACROS_HEADER_RE = re.compile(r'^macros:\s*$')
-_MACRO_PARSE_RE = re.compile(r'["\']?(\w+)["\']?\s*:\s*(.+)')
-_MACRO_SUB_RE = re.compile(r'\$\{(\w+)([+\-*/]\d+)?\}')
-_INLINE_COMMENT_RE = re.compile(r'\s+#.*$')
-
-
-# ======================================================================
 # Configuration (edit these values to customize behavior)
 # ======================================================================
 SOURCE_DIR = Path("./example/conf")               # Directory containing YAML files to merge
@@ -64,6 +54,16 @@ OUTPUT_FILE = Path("./example/config.yaml")       # Output file path
 REMOVE_COMMENTS = True                    # Set False to keep comment lines in output
 REMOVE_EMPTY_LINES = True                 # Set False to keep empty lines in output
 ADD_SEPARATORS = False                    # Set True to add "# filename" comments
+
+
+# ======================================================================
+# Regex patterns (compile once, reuse for performance)
+# ======================================================================
+_NATURAL_SORT_RE = re.compile(r'(\d+)')
+_MACROS_HEADER_RE = re.compile(r'^macros:\s*$')
+_MACRO_PARSE_RE = re.compile(r'["\']?(\w+)["\']?\s*:\s*(.+)')
+_MACRO_SUB_RE = re.compile(r'\$\{(\w+)([+\-*/]\d+)?\}')
+_INLINE_COMMENT_RE = re.compile(r'\s+#.*$')
 
 
 # ======================================================================
