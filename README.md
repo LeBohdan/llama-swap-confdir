@@ -64,6 +64,42 @@ python3 reconfig.py
 
 `config.yaml` is generated with all models properly formatted and indented.
 
+> **Note:** The default config uses `./example/`. See **First-Time Setup** to configure your own `conf/` directory.
+
+---
+
+## First-Time Setup
+
+The script ships with default paths pointing to `./example/`. To use it for your own llama-swap instance:
+
+### 1. Create your `conf/` directory
+
+```bash
+mkdir conf
+cp example/conf/*.yaml conf/
+```
+
+### 2. Update paths in `reconfig.py`
+
+Edit the first two lines under "Configuration" at the top of `reconfig.py`:
+
+```python
+SOURCE_DIR = Path("./conf")           # Your model configs
+OUTPUT_FILE = Path("config.yaml")     # Where to write the merged file
+```
+
+### 3. Run
+
+```bash
+python3 reconfig.py
+```
+
+Now `config.yaml` is generated from your own `conf/` directory. You can also use CLI flags without editing the script:
+
+```bash
+python3 reconfig.py --source ./conf --output config.yaml
+```
+
 ---
 
 ## Practical Administration Tasks
@@ -261,12 +297,14 @@ Macros inside `cmd:` blocks are **not** substituted - they're resolved by llama-
 Edit these variables at the top of `reconfig.py`:
 
 ```python
-SOURCE_DIR = Path("./conf")        # Directory containing YAML files
-OUTPUT_FILE = Path("config.yaml")  # Output file path
-REMOVE_COMMENTS = True             # Remove comment lines (starting with #)
-REMOVE_EMPTY_LINES = True          # Remove empty lines for compact output
-ADD_SEPARATORS = False             # Add "# filename" comments between files
+SOURCE_DIR = Path("./example/conf")        # Directory containing YAML files (default: ./example/)
+OUTPUT_FILE = Path("./example/config.yaml")  # Output file path (default: ./example/)
+REMOVE_COMMENTS = True                     # Remove comment lines (starting with #)
+REMOVE_EMPTY_LINES = True                  # Remove empty lines for compact output
+ADD_SEPARATORS = False                     # Add "# filename" comments between files
 ```
+
+> **Production use:** Change `SOURCE_DIR` and `OUTPUT_FILE` to point to your own `./conf/` and `config.yaml`. See **First-Time Setup**.
 
 `DRY_RUN` is controlled via CLI flag `--dry-run` or environment variable `DRY_RUN=1`.
 
@@ -310,13 +348,16 @@ chmod +x reconfig.py
 ### Examples
 
 ```bash
-# Preview without writing
+# Preview without writing (uses example/ by default)
 python3 reconfig.py --dry-run
 
 # Set via environment variable
 DRY_RUN=1 python3 reconfig.py
 
-# Override paths
+# Run against your own conf/ without editing the script
+python3 reconfig.py --source ./conf --output config.yaml
+
+# Preview your own conf/ without writing
 python3 reconfig.py --source ./conf --output config.yaml --dry-run
 ```
 
@@ -348,7 +389,8 @@ llama-swap-confdir/
 │       ├── Gemma-4-E4B.yaml     # Model config
 │       ├── Qwen3-14B.yaml       # Model config
 │       ├── Ternary-Bonsai-8B.yaml
-│       ├── MamayLM-Gemma-3-12B.yaml
+│       ├── Qwen3.5-9B.yaml        # Model config
+│       ├── Qwen3-Embedding-4B.yaml
 │       └── 00-groups.yaml        # Group definitions (end)
 └── reconfig.py
 ```
