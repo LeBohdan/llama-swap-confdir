@@ -18,24 +18,27 @@ Configuration Options (edit in script):
 ----------------------------------
 - SOURCE_DIR: Directory containing YAML files (default: "./conf")
 - OUTPUT_FILE: Output file path (default: "config.yaml")
-- DRY_RUN: Preview without writing (default: False)
 - REMOVE_COMMENTS: Remove comment lines from output (default: True)
 - REMOVE_EMPTY_LINES: Remove empty lines from output (default: True)
 - ADD_SEPARATORS: Add "# filename" comments between files (default: False)
+
+`DRY_RUN` is controlled via `--dry-run` flag or environment variable `DRY_RUN=1`.
 
 Backup System:
 --------------
 - Existing config.yaml is backed up before overwriting
 - Single backup file: config.yaml.bak (overwritten each run)
 
-Usage:
-------
+    Usage:
+    ------
     python3 reconfig.py        # Generate config.yaml
-    DRY_RUN = True            # Preview without writing (edit in script)
+    python3 reconfig.py --dry-run   # Preview without writing
 """
 
 import sys
 import re
+import os
+import argparse
 from pathlib import Path
 from typing import IO
 
@@ -54,7 +57,7 @@ _MACRO_SUB_RE = re.compile(r'\$\{(\w+)([+\-*/]\d+)?\}')
 # ======================================================================
 SOURCE_DIR = Path("./example/conf")               # Directory containing YAML files to merge
 OUTPUT_FILE = Path("./example/config.yaml")       # Output file path
-DRY_RUN = False                           # Set True to preview without writing
+DRY_RUN = os.environ.get("DRY_RUN", "0") == "1"  # Preview without writing (env: DRY_RUN=1)
 REMOVE_COMMENTS = True                    # Set False to keep comment lines in output
 REMOVE_EMPTY_LINES = True                 # Set False to keep empty lines in output
 ADD_SEPARATORS = False                    # Set True to add "# filename" comments
@@ -64,7 +67,7 @@ ADD_SEPARATORS = False                    # Set True to add "# filename" comment
 # Public Functions (intended for external use)
 # ======================================================================
 
-def run(source_dir: Path = SOURCE_DIR, output_file: Path = OUTPUT_FILE) -> None:
+def run(source_dir: Path = SOURCE_DIR, output_file: Path = OUTPUT_FILE, dry_run: bool = False) -> None:
     """
     Main entry point to merge YAML configuration files.
 
@@ -77,9 +80,10 @@ def run(source_dir: Path = SOURCE_DIR, output_file: Path = OUTPUT_FILE) -> None:
 
     Args:
         source_dir: Path to directory containing YAML config files.
-                   Defaults to the module-level SOURCE_DIR.
+                    Defaults to the module-level SOURCE_DIR.
         output_file: Path for the merged output file.
-                    Defaults to the module-level OUTPUT_FILE.
+                     Defaults to the module-level OUTPUT_FILE.
+        dry_run: If True, preview without writing.
 
     Raises:
         SystemExit: If source directory doesn't exist.
@@ -91,7 +95,7 @@ def run(source_dir: Path = SOURCE_DIR, output_file: Path = OUTPUT_FILE) -> None:
     config_files = _collect_yaml_files(source_dir)
     config_files = _sort_naturally(config_files)
 
-    if DRY_RUN:
+    if dry_run:
         _preview_files(config_files, source_dir)
         return
 
@@ -553,4 +557,9 @@ def _write_as_model_config(output_handle: IO[str], file_path: Path, source_dir: 
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser(description="Merge YAML configuration files for llama-swap.")
+    parser.add_argument("--dry-run", action="store_true", help="Preview output without writing")
+    parser.add_argument("--source", type=Path, default=SOURCE_DIR, help="Source directory containing YAML files")
+    parser.add_argument("--output", type=Path, default=OUTPUT_FILE, help="Output file path")
+    args = parser.parse_args()
+    run(source_dir=args.source, output_file=args.output, dry_run=args.dry_run)

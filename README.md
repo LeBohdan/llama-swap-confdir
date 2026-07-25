@@ -96,11 +96,12 @@ Edit these variables at the top of `reconfig.py`:
 ```python
 SOURCE_DIR = Path("./conf")        # Directory containing YAML files
 OUTPUT_FILE = Path("config.yaml")  # Output file path
-DRY_RUN = False               # Set True to preview without writing
 REMOVE_COMMENTS = True        # Set False to keep comment lines in output
 REMOVE_EMPTY_LINES = True      # Set False to keep empty lines in output
-ADD_SEPARATORS = False        # Set True to add "# filename" comments between files
+ADD_SEPARATORS = False        # Set True to add "# filename" comments
 ```
+
+`DRY_RUN` is controlled via CLI flag `--dry-run` or environment variable `DRY_RUN=1`.
 
 ### Separators
 
@@ -137,9 +138,26 @@ chmod +x reconfig.py
 ./reconfig.py
 ```
 
-## Preview Mode
+## CLI Options
 
-To preview what would be generated without writing, edit `DRY_RUN = True` in `reconfig.py`, then run the script.
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Preview output without writing |
+| `--source DIR` | Override source directory |
+| `--output FILE` | Override output file |
+
+### Examples
+
+```bash
+# Preview without writing
+python3 reconfig.py --dry-run
+
+# Set via environment variable
+DRY_RUN=1 python3 reconfig.py
+
+# Override paths
+python3 reconfig.py --source ./conf --output config.yaml --dry-run
+```
 
 ## Backup System
 
