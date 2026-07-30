@@ -1,5 +1,10 @@
 # llama-swap Configuration Merger
 
+Copyright (c) 2026 Bohdan Futerko  
+Website: https://www.bf.com.ua  
+GitHub: https://github.com/LeBohdan
+
+
 A Python utility that simplifies llama-swap configuration management through a "one model, one file" approach. Edit individual model configs, then generate a unified `config.yaml`.
 
 ## Philosophy

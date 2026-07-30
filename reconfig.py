@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 """
-llama-swap Configuration Merger
+llama-swap Configuration Merger v1.0
+
+Copyright (c) 2026 Bohdan Futerko
+Website: https://www.bf.com.ua
+GitHub: https://github.com/LeBohdan
+
+This project is licensed under the MIT License.
+See the LICENSE file for details.
+"""
+
 
 This script merges multiple YAML configuration files from a source directory
 into a single consolidated config.yaml file for llama-swap.
